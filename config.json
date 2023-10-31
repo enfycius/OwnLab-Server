@@ -1,4 +1,0 @@
-{
-  "connectionString": "mongodb+srv://Tester:!1234@testcluster.b9o24q6.mongodb.net/?retryWrites=true&w=majority",
-  "secret": "//DESIRED SECRET KEY FOR JWT TOKEN"
-}
