@@ -1,22 +1,19 @@
-#!/usr/bin/env python
-"""Django's command-line utility for administrative tasks."""
-import os
-import sys
 
+def deploy():
+	"""Run deployment tasks."""
+	from app import create_app,db
+	from flask_migrate import upgrade,migrate,init,stamp
+	from models import User
 
-def main():
-    """Run administrative tasks."""
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
-    try:
-        from django.core.management import execute_from_command_line
-    except ImportError as exc:
-        raise ImportError(
-            "Couldn't import Django. Are you sure it's installed and "
-            "available on your PYTHONPATH environment variable? Did you "
-            "forget to activate a virtual environment?"
-        ) from exc
-    execute_from_command_line(sys.argv)
+	app = create_app()
+	app.app_context().push()
+	db.create_all()
 
-
-if __name__ == '__main__':
-    main()
+	# migrate database to latest revision
+	init()
+	stamp()
+	migrate()
+	upgrade()
+	
+deploy()
+	
