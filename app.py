@@ -1,37 +1,14 @@
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
-from flask_bcrypt import Bcrypt
-from flask_migrate import Migrate
+from flask_restx import Api
+from auth import Auth
+from flask_jwt_extended import JWTManager
 
-from flask_login import (
-    UserMixin,
-    login_user,
-    LoginManager,
-    current_user,
-    logout_user,
-    login_required,
-)
+app = Flask(__name__)
+app.config['JWT_SECRET_KEY'] = 'super-secret'
+jwt = JWTManager(app)
 
-login_manager = LoginManager()
-login_manager.session_protection = "strong"
-login_manager.login_view = "login"
-login_manager.login_message_category = "info"
+api = Api(app)
+api.add_namespace(Auth, '/auth')
 
-db = SQLAlchemy()
-migrate = Migrate()
-bcrypt = Bcrypt()
-
-
-def create_app():
-    app = Flask(__name__)
-
-    app.secret_key = 'secret-key'
-    app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///database.db"
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
-
-    login_manager.init_app(app)
-    db.init_app(app)
-    migrate.init_app(app, db)
-    bcrypt.init_app(app)
-    
-    return app
+if __name__ == "__main__":
+    app.run(debug=True)
