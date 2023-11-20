@@ -1,6 +1,6 @@
 import jwt
 import bcrypt
-from flask import request
+from flask import redirect, request, flash, send_from_directory, url_for
 from flask_restx import Resource, Api, Namespace, fields
 from config import DB
 import pymysql
@@ -85,3 +85,44 @@ class AuthLogin(Resource):
             return {
                 'Authorization': jwt.encode({'name': name}, "secret", algorithm="HS256") # str으로 반환하여 return
             }, 200
+
+import os
+from werkzeug.utils import secure_filename
+
+UPLOAD_FOLDER = os.path.join('static', 'images')
+ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
+Auth.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@Auth.route('/upload', methods = ['GET', 'POST'])
+def file_upload():
+    if request.method == 'POST':
+        if 'file' not in request.files:
+            flash('No file part')
+            return redirect(request.url)
+        file = request.files['file']
+        if file.filename == '':
+            flash('No selected file')
+            return redirect(request.url)
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            file.save(os.path.join(Auth.config['UPLOAD_FOLDER'], filename))
+            sql = "INSERT INTO file (img_name, img_path) VALUES (%s, %s)", (filename, os.path.join(Auth.config['UPLOAD_FOLDER'], filename))
+            cursor.execute(sql)
+            return redirect(url_for('download_file', name=filename))
+    return '''
+    <!doctype html>
+    <title>Upload new File</title>
+    <h1>Upload new File</h1>
+    <form method=post enctype=multipart/form-data>
+      <input type=file name=file>
+      <input type=submit value=Upload>
+    </form>
+    '''
+
+@Auth.route('/uploads/<name>')
+def download_file(name):
+    return send_from_directory(Auth.config["UPLOAD_FOLDER"], name)
