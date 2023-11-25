@@ -95,7 +95,7 @@ Auth.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 def allowed_file(filename):
     return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+        filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 @Auth.route('/upload', methods = ['GET', 'POST'])
 def file_upload():
@@ -118,8 +118,8 @@ def file_upload():
     <title>Upload new File</title>
     <h1>Upload new File</h1>
     <form method=post enctype=multipart/form-data>
-      <input type=file name=file>
-      <input type=submit value=Upload>
+        <input type=file name=file>
+        <input type=submit value=Upload>
     </form>
     '''
 
