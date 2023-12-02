@@ -1,9 +1,9 @@
-import pymysql
-import os
-from flask import request
-from flask_restx import Api, Namespace, Resource
+import jwt
+import bcrypt
+from flask import redirect, request, flash, send_from_directory, url_for
+from flask_restx import Resource, Api, Namespace, fields
 from config import DB
-from werkzeug.utils import secure_filename
+import pymysql
 
 conn = pymysql.connect(
         host=DB['host'], 
@@ -21,7 +21,7 @@ Resume = Namespace(
 )
 
 @Resume.route('/resume')
-class Resume(Resource):
+class resume_api(Resource):
     def get(self):
         cursor.execute("SELECT * FROM resume")
         resumes = cursor.fetchall()
@@ -62,3 +62,20 @@ class Resume(Resource):
         return {
             "message": "Success"
         }, 200
+    
+from werkzeug.utils import secure_filename
+import os
+
+image_path = os.path.join('static', 'images')
+
+@Resume.route('/upload')
+class file_upload(Resource):
+    def post(self):
+        file = request.files['file']
+        
+        filename = secure_filename(file.filename)
+        os.mkdirs(image_path, exists_ok=True)
+        file.save(os.path.join(image_path, filename))
+        cursor.execute("INSERT INTO resume (profile) VALUES (%s)", (filename))
+        file_url = cursor.fetchall()
+        return file_url
