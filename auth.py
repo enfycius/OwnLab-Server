@@ -89,7 +89,6 @@ class AuthLogin(Resource):
             sql = "UPDATE user SET recent_login = now() where name = %s"
             cursor.execute(sql, name)
             conn.commit()
-            conn.close()
 
             return {
                 'Authorization': jwt.encode({'name': name}, "secret", algorithm="HS256") # str으로 반환하여 return
