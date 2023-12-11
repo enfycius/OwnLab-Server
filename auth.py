@@ -8,6 +8,7 @@ from config import DB
 import pymysql
 import os
 from werkzeug.utils import secure_filename
+from auth_util import check_access_token, login_required
 
 conn = pymysql.connect(
         host=DB['host'], 
@@ -97,6 +98,7 @@ class AuthLogin(Resource):
             }, 200
         
 @Auth_api.route('/email')
+@login_required
 class AuthEmail(Resource):
     def get(self):
         access_token = request.headers.get('Authorization')
@@ -107,29 +109,6 @@ class AuthEmail(Resource):
         else:
             return Response(status=401)
         return payload
-
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        access_token = request.headers.get('Authorization')
-        if access_token is not None:
-            payload = check_access_token(access_token)
-            if payload is None:
-                return Response(status=401)
-        else:
-            return Response(status=401)
-        return f(*args, **kwargs)
-    
-    return decorated_function
-
-def check_access_token(access_token):
-    try:
-        payload = jwt.decode(access_token, "secret", algorithms=["HS256"])
-        # if payload['exp'] < datetime.utcnow():
-        #     payload = None
-    except jwt.InvalidTokenError:
-        payload = None
-    return payload
 
 UPLOAD_FOLDER = os.path.join('static', 'images')
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
