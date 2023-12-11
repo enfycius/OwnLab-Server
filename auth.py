@@ -1,6 +1,8 @@
+import datetime
 import jwt
 import bcrypt
-from flask import redirect, render_template, request
+from flask import redirect, render_template, request,Response
+from functools import wraps
 from flask_restx import Resource, Api, Namespace, fields
 from config import DB
 import pymysql
@@ -70,12 +72,12 @@ class AuthLogin(Resource):
     @Auth_api.doc(responses={404: 'User Not Found'})
     @Auth_api.doc(responses={500: 'Auth Failed'})
     def post(self):
-        name = request.json['name']
+        email = request.json['email']
         pwd = request.json['pwd']
-        cursor.execute("SELECT pwd FROM user WHERE name=%s", (name))
+        cursor.execute("SELECT pwd FROM user WHERE email=%s", (email))
         pwd_hash = cursor.fetchone()
         
-        if not cursor.execute("SELECT * FROM user WHERE name=%s", (name)):
+        if not cursor.execute("SELECT * FROM user WHERE email=%s", (email)):
             return {
                 "message": "User Not Found"
             }, 404
@@ -86,13 +88,48 @@ class AuthLogin(Resource):
             }, 500
         else:
             # 최근 로그인 시간 업데이트
-            sql = "UPDATE user SET recent_login = now() where name = %s"
-            cursor.execute(sql, name)
+            sql = "UPDATE user SET recent_login = now() where email = %s"
+            cursor.execute(sql, email)
             conn.commit()
 
             return {
-                'Authorization': jwt.encode({'name': name}, "secret", algorithm="HS256") # str으로 반환하여 return
+                'Authorization': jwt.encode({'email': email}, "secret", algorithm="HS256") # str으로 반환하여 return
             }, 200
+        
+@Auth_api.route('/email')
+class AuthEmail(Resource):
+    def get(self):
+        access_token = request.headers.get('Authorization')
+        if access_token is not None:
+            payload = check_access_token(access_token)
+            if payload is None:
+                return Response(status=401)
+        else:
+            return Response(status=401)
+        return payload
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        access_token = request.headers.get('Authorization')
+        if access_token is not None:
+            payload = check_access_token(access_token)
+            if payload is None:
+                return Response(status=401)
+        else:
+            return Response(status=401)
+        return f(*args, **kwargs)
+    
+    return decorated_function
+
+def check_access_token(access_token):
+    try:
+        payload = jwt.decode(access_token, "secret", algorithms=["HS256"])
+        # if payload['exp'] < datetime.utcnow():
+        #     payload = None
+    except jwt.InvalidTokenError:
+        payload = None
+    return payload
 
 UPLOAD_FOLDER = os.path.join('static', 'images')
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
