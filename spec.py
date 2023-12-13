@@ -36,8 +36,40 @@ class spec_api(Resource):
             cert_name = request.form['cert_name'] # 자격증명
             cert_inst = request.form['cert_inst'] # 발행기관
             cert_day = request.form['cert_day'] # 취득일
+
+            cursor.execute("INSERT INTO spec (cert_name, cert_inst, cert_day) VALUES (%s, %s, %s)", (cert_name, cert_inst, cert_day))
+        
+        elif tos == '수상':
+            award_name = request.form['award_name']
+            award_inst = request.form['award_inst']
+            award_day = request.form['award_day']
+
+            cursor.execute("INSERT INTO spec (award_name, award_inst, award_day) VALUES (%s, %s, %s)", (award_name, award_inst, award_day))
+
+        elif tos == '어학':
+            lang_name = request.form['lang_name']
+            lang_inst = request.form['lang_inst']
+            lang_day = request.form['lang_day']
+            lang_score = request.form['lang_score']
+
+            cursor.execute("INSERT INTO spec (lang_name, lang_inst, lang_day, lang_score) VALUES (%s, %s, %s, %s)", (lang_name, lang_inst, lang_day, lang_score))
             
+        elif tos == '포트폴리오':
+            port_name = request.form['port_name']
+            port_period = request.form['port_period']
+            port_person = request.form['port_person']
+            port_tool = request.form['port_tool']
+            port_intro = request.form['port_intro']
+            port_content = request.form['port_content']
 
-            conn.commit()
+            cursor.execute("INSERT INTO spec (port_name, port_period, port_person, port_tool, port_intro, port_content) VALUES (%s, %s, %s, %s, %s, %s)", (port_name, port_period, port_person, port_tool, port_intro, port_content))
 
-            return {'result': 'success'}
+        elif tos == '자기소개서':
+            intro_name = request.form['intro_name']
+            intro_content = request.form['intro_content']
+
+            cursor.execute("INSERT INTO spec (intro_name, intro_content) VALUES (%s, %s)", (intro_name, intro_content))
+
+        conn.commit()
+
+        return {'result': 'success'}
