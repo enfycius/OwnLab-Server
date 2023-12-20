@@ -1,7 +1,7 @@
 import pymysql
 import os
 from flask import request
-from flask_restx import Api, Namespace, Resource
+from flask_restx import Api, Namespace, Resource, fields
 from config import DB
 from werkzeug.utils import secure_filename
 
@@ -20,16 +20,42 @@ Spec_api = Namespace(
     description="스펙 관련 API",
 )
 
+spec_fields = Spec_api.model('Spec', {  # Model 객체 생성
+    'cert_name': fields.String(required=True),
+    'cert_inst': fields.String(required=True),
+    'cert_day': fields.String(required=True),
+    'award_name': fields.String(required=True),
+    'award_inst': fields.String(required=True),
+    'award_day': fields.String(required=True),
+    'lang_name': fields.String(required=True),
+    'lang_day': fields.String(required=True),
+    'lang_class': fields.String(required=True),
+    'lang_score': fields.String(required=True),
+    'lang_acquire': fields.String(required=True),
+    'port_name': fields.String(required=True),
+    'port_period': fields.String(required=True),
+    'port_person': fields.String(required=True),
+    'port_tool': fields.String(required=True),
+    'port_intro': fields.String(required=True),
+    'port_content': fields.String(required=True),
+    'intro_name': fields.String(required=True),
+    'intro_content': fields.String(required=True)
+})
+
 UPLOAD_FOLDER = os.path.join('static', 'images')
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
 
 @Spec_api.route('/add_spec', methods = ['GET', 'POST'])
 class spec_api(Resource):
+    @Spec_api.doc(description='스펙 조회')
+    @Spec_api.response(200, '조회 성공')
     def get(self):
         cursor.execute("SELECT * FROM spec")
         specs = cursor.fetchall()
         return specs
     
+    @Spec_api.doc(description='스펙 추가')
+    @Spec_api.expect(spec_fields)
     def post(self):
         tos = request.form['type_of_spec']
         email = request.form['email']

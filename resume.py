@@ -55,6 +55,7 @@ ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
 @Resume_api.route('/add_resume', methods = ['GET', 'POST'])
 class add_resume(Resource):
     @Resume_api.doc(description='이력서 조회')
+    @Resume_api.response(200, '조회 성공')
     def get(self):
         cursor.execute("SELECT * FROM resume")
         resumes = cursor.fetchall()
@@ -62,6 +63,7 @@ class add_resume(Resource):
 
     @Resume_api.expect(resume_fields)
     @Resume_api.doc(description="이력서 등록")
+    @Resume_api.response(200, '등록 성공')
     def post(self): 
         profile = request.files['file']
         name = request.form['name']

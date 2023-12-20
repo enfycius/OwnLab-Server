@@ -1,7 +1,7 @@
 import pymysql
 import os
 from flask import request
-from flask_restx import Api, Namespace, Resource
+from flask_restx import Api, Namespace, Resource, fields
 from config import DB
 from werkzeug.utils import secure_filename
 
@@ -20,8 +20,16 @@ Post_api = Namespace(
     description="게시글 관련 API",
 )
 
+post_fields = Post_api.model('Post', {  # Model 객체 생성
+    'title': fields.String(required=True),
+    'content': fields.String(required=True),
+    'email': fields.String(required=True)
+})
+
 @Post_api.route('/add_post', methods = ['POST'])
 class add_post(Resource):
+    @Post_api.doc(description='게시글 추가')
+    @Post_api.expect(post_fields)
     def post(self): 
         title = request.json['title']
         content = request.json['content']
@@ -29,7 +37,6 @@ class add_post(Resource):
         
         cursor.execute("SELECT * FROM post where title = %s", title)
         posts = cursor.fetchone()
-        # print(posts['title'])
 
         if posts:
             if posts['title'] == title:
@@ -41,6 +48,7 @@ class add_post(Resource):
         
 @Post_api.route('/get_post', methods = ['GET'])
 class get_post(Resource):
+    @Post_api.doc(description='게시글 조회')
     def get(self):
         cursor.execute("SELECT * FROM post")
         posts = cursor.fetchall()
@@ -48,6 +56,7 @@ class get_post(Resource):
     
 @Post_api.route('/get_post/<int:post_id>', methods = ['GET'])
 class get_post(Resource):
+    @Post_api.doc(description='게시글 확인')
     def get(self, post_id):
         cursor.execute(f"SELECT * FROM post WHERE post_id = {post_id}")
         posts = cursor.fetchall()
@@ -55,6 +64,7 @@ class get_post(Resource):
     
 @Post_api.route('/delete_post/<int:post_id>', methods = ['DELETE'])
 class delete_post(Resource):
+    @Post_api.doc(description='게시글 삭제')
     def delete(self, post_id):
         cursor.execute(f"SELECT * FROM post WHERE post_id = {post_id}")
         exist = cursor.fetchone()
@@ -68,6 +78,7 @@ class delete_post(Resource):
 
 @Post_api.route('/update_post/<int:post_id>', methods = ['PUT'])
 class update_post(Resource):
+    @Post_api.doc(description='게시글 수정')
     def put(self, post_id):
         title = request.json['title']
         content = request.json['content']
