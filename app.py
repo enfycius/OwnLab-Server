@@ -4,6 +4,7 @@ from flask_jwt_extended import JWTManager
 from auth import Auth_api
 from resume import Resume_api
 from spec import Spec_api
+from post import Post_api
 
 app = Flask(__name__)
 app.config['JWT_SECRET_KEY'] = 'super-secret'
@@ -13,6 +14,7 @@ api = Api(app)
 api.add_namespace(Auth_api, '/auth')
 api.add_namespace(Resume_api, '/resume')
 api.add_namespace(Spec_api, '/spec')
+api.add_namespace(Post_api, '/post')
 
 if __name__ == "__main__":
     app.run(debug=True)

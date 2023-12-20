@@ -132,7 +132,22 @@ class AuthEmail(Resource):
         else:
             return Response(status=401)
         return payload
-    
+
+@Auth_api.route('/email/check')
+class AuthEmailCheck(Resource):
+    def post(self):
+        email = request.json['email']
+        cursor.execute("SELECT * FROM user WHERE email=%s", (email))
+        user = cursor.fetchone()
+        if user:
+            return {
+                "message": "Failed"
+            }, 500
+        else:
+            return {
+                "message": "Success"
+            }, 200
+
 UPLOAD_FOLDER = os.path.join('static', 'images')
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
 
