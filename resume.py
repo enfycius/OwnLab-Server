@@ -1,7 +1,7 @@
 import pymysql
 import os
 from flask import request
-from flask_restx import Api, Namespace, Resource
+from flask_restx import Api, Namespace, Resource, fields
 from config import DB
 from werkzeug.utils import secure_filename
 
@@ -20,16 +20,48 @@ Resume_api = Namespace(
     description="이력서 관련 API",
 )
 
+resume_fields = Resume_api.model('Resume', {  # Model 객체 생성
+    'profile': fields.String(required=True),
+    'name': fields.String(required=True),
+    'tel': fields.String(required=True),
+    'email': fields.String(required=True),
+    'birth': fields.String(required=True),
+    'sex': fields.String(required=True),
+    'address': fields.String(required=True),
+    'school': fields.String(required=True),
+    'school_state': fields.String(required=True),
+    'company_career': fields.String(required=True),
+    'part_career': fields.String(required=True),
+    'work_time': fields.String(required=True),
+    'work_start': fields.String(required=True),
+    'work_end': fields.String(required=True),
+    'working': fields.Boolean(required=True),
+    'work': fields.String(required=True),
+    'sido': fields.String(required=True),
+    'sigungu': fields.String(required=True),
+    'first_work': fields.String(required=True),
+    'second_work': fields.String(required=True),
+    'work_type': fields.String(required=True),
+    'wish_work_term': fields.String(required=True),
+    'wish_work_term_etc': fields.String(required=True),
+    'wish_salary_type': fields.String(required=True),
+    'ps': fields.String(required=True),
+    'open_permission': fields.Boolean(required=True)
+})
+
 UPLOAD_FOLDER = os.path.join('static', 'images')
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
 
 @Resume_api.route('/add_resume', methods = ['GET', 'POST'])
 class add_resume(Resource):
+    @Resume_api.doc(description='이력서 조회')
     def get(self):
         cursor.execute("SELECT * FROM resume")
         resumes = cursor.fetchall()
         return resumes
-    
+
+    @Resume_api.expect(resume_fields)
+    @Resume_api.doc(description="이력서 등록")
     def post(self): 
         profile = request.files['file']
         name = request.form['name']

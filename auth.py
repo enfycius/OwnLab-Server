@@ -52,22 +52,46 @@ Auth_api = Namespace(
 )
 
 user_fields = Auth_api.model('User', {  # Model 객체 생성
-    'name': fields.String(description='a User Name', required=True, example="justkode")
+    'name': fields.String(required=True)
 })
 
 user_fields_auth = Auth_api.inherit('User Auth', user_fields, {
-    'password': fields.String(description='Password', required=True, example="password")
+    'pwd': fields.String(drequired=True)
+})
+
+user_fields_register = Auth_api.inherit('User Register', user_fields_auth, {
+    'tel': fields.String(required=True),
+    'email': fields.String(required=True)
+})
+
+email_fields = Auth_api.model('Email', {
+    'email': fields.String(required=True)
 })
 
 jwt_fields = Auth_api.model('JWT', {
     'Authorization': fields.String(description='Authorization which you must inclued in header', required=True, example="eyJ0e~~~~~~~~~")
 })
 
+company_fields = Auth_api.model('Company', {
+    'company_name': fields.String(required=True),
+    'zip_code': fields.String(required=True),
+    'address': fields.String(required=True),
+    'address_detail': fields.String(required=True),
+    'ceo_name': fields.String(required=True),
+    'ceo_tel': fields.String(required=True),
+    'homepage': fields.String(required=True),
+    'created_date': fields.String(required=True),
+    'listed': fields.String(required=True),
+    'company_vision': fields.String(required=True),
+    'company_img': fields.String(required=True, description="company image"),
+    'rep_img': fields.String(required=True, description="representative image"),
+    'logo': fields.String(required=True, description="logo file")
+})
+
 @Auth_api.route('/register')
 class AuthRegister(Resource):
-    @Auth_api.expect(user_fields_auth)
-    @Auth_api.doc(responses={200: 'Success'})
-    @Auth_api.doc(responses={500: 'Register Failed'})
+    @Auth_api.expect(user_fields_register)
+    @Auth_api.doc(description="회원 가입")
     def post(self):
         email = request.json['email']
         name = request.json['name']
@@ -77,7 +101,7 @@ class AuthRegister(Resource):
         if cursor.execute("SELECT * FROM user WHERE email=%s", (email)):
             return {
                 "message": "User Already Exists"
-            }, 500
+            }, 200
         else:
             pwd_hash = bcrypt.hashpw(pwd.encode("utf-8"), bcrypt.gensalt())  # 비밀번호 해싱
             cursor.execute("INSERT INTO user (email, name, pwd, tel, join_date) VALUES (%s, %s, %s, %s, now())", (email, name, pwd_hash, tel))
@@ -92,9 +116,7 @@ class AuthRegister(Resource):
 @Auth_api.route('/login')
 class AuthLogin(Resource):
     @Auth_api.expect(user_fields_auth)
-    @Auth_api.doc(responses={200: 'Success'})
-    @Auth_api.doc(responses={404: 'User Not Found'})
-    @Auth_api.doc(responses={500: 'Auth Failed'})
+    @Auth_api.doc(description="로그인")
     def post(self):
         email = request.json['email']
         pwd = request.json['pwd']
@@ -104,12 +126,12 @@ class AuthLogin(Resource):
         if not cursor.execute("SELECT * FROM user WHERE email=%s", (email)):
             return {
                 "message": "User Not Found"
-            }, 404
+            }, 200
         
         elif not bcrypt.checkpw(pwd.encode('utf-8'), pwd_hash['pwd'].encode('utf-8')):  # 비밀번호 일치 확인
             return {
                 "message": "Auth Failed"
-            }, 500
+            }, 200
         else:
             # 최근 로그인 시간 업데이트
             sql = "UPDATE user SET recent_login = now() where email = %s"
@@ -119,22 +141,11 @@ class AuthLogin(Resource):
             return {
                 'Authorization': jwt.encode({'email': email}, "secret", algorithm="HS256") # str으로 반환하여 return
             }, 200
-        
-@login_required
-@Auth_api.route('/email')
-class AuthEmail(Resource):
-    def get(self):
-        access_token = request.headers.get('Authorization')
-        if access_token is not None:
-            payload = check_access_token(access_token)
-            if payload is None:
-                return Response(status=401)
-        else:
-            return Response(status=401)
-        return payload
 
 @Auth_api.route('/email/check')
 class AuthEmailCheck(Resource):
+    @Auth_api.expect(email_fields)
+    @Auth_api.doc(description="이메일 중복 체크")
     def post(self):
         email = request.json['email']
         cursor.execute("SELECT * FROM user WHERE email=%s", (email))
@@ -142,7 +153,7 @@ class AuthEmailCheck(Resource):
         if user:
             return {
                 "message": "Failed"
-            }, 500
+            }, 200
         else:
             return {
                 "message": "Success"
@@ -151,11 +162,10 @@ class AuthEmailCheck(Resource):
 UPLOAD_FOLDER = os.path.join('static', 'images')
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
 
-@Auth_api.route('/leave', methods = ['GET','POST'])
+@Auth_api.route('/leave', methods = ['POST'])
 class leave(Resource):
-    def get(self):
-        return "hi"
-    
+    @Auth_api.expect(user_fields_auth)
+    @Auth_api.doc(description="회원 탈퇴")
     def post(self):
         name = request.json['name']
         pwd = request.json['pwd']
@@ -171,6 +181,8 @@ class leave(Resource):
     
 @Auth_api.route('/company', methods = ['POST'])
 class company(Resource):
+    @Auth_api.expect(company_fields)
+    @Auth_api.doc(description="기업 등록")
     def post(self):
         name = request.form['name']
         company_name = request.form['company_name']
@@ -211,3 +223,17 @@ class company(Resource):
         conn.close()
 
         return 'upload success'
+    
+@login_required
+@Auth_api.route('/email')
+class AuthEmail(Resource):
+    @Auth_api.doc(description="토큰 to 이메일")
+    def get(self):
+        access_token = request.headers.get('Authorization')
+        if access_token is not None:
+            payload = check_access_token(access_token)
+            if payload is None:
+                return Response(status=401)
+        else:
+            return Response(status=401)
+        return payload

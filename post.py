@@ -56,9 +56,15 @@ class get_post(Resource):
 @Post_api.route('/delete_post/<int:post_id>', methods = ['DELETE'])
 class delete_post(Resource):
     def delete(self, post_id):
-        cursor.execute(f"DELETE FROM post WHERE post_id = {post_id}")
-        conn.commit()
-        return "success"
+        cursor.execute(f"SELECT * FROM post WHERE post_id = {post_id}")
+        exist = cursor.fetchone()
+
+        if exist is None:
+            return "fail"
+        else:
+            cursor.execute(f"DELETE FROM post WHERE post_id = {post_id}")
+            conn.commit()
+            return "success"
 
 @Post_api.route('/update_post/<int:post_id>', methods = ['PUT'])
 class update_post(Resource):
