@@ -1,5 +1,7 @@
 from flask_restx import Resource, Api, Namespace, fields
 from flask import redirect, render_template, request,Response
+from auth_util import login_required
+import json
 
 Model_api = Namespace(
     name="Model",
@@ -8,12 +10,15 @@ Model_api = Namespace(
 
 @Model_api.route('/')
 class Model(Resource):
-    def post(self):
+    def get(self):
         survey_list = []
-        # print(request.json)
-        for i in range(len(request.json)):
-            survey_list.append(request.json["q"+str(i+1)])
+
+        with open('items.json', 'r', encoding='UTF8') as f:
+            items = json.load(f)
+
+        for i in range(len(items)):
+            survey_list.append(items['q'+str(i+1)])
         
         return {
-            "question": survey_list
-        },200
+            'question': survey_list
+        }
