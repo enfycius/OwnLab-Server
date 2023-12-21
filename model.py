@@ -10,6 +10,7 @@ Model_api = Namespace(
 
 @Model_api.route('/')
 class Model(Resource):
+    # @login_required
     def get(self):
         survey_list = []
 

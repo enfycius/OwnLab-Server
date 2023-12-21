@@ -201,10 +201,10 @@ class company(Resource):
 
         return 'upload success'
     
-@login_required
 @Auth_api.route('/email')
 class AuthEmail(Resource):
     @Auth_api.doc(description="토큰 to 이메일")
+    @login_required
     def get(self):
         access_token = request.headers.get('Authorization')
         if access_token is not None:
