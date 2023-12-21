@@ -4,6 +4,7 @@ from flask import request
 from flask_restx import Api, Namespace, Resource, fields
 from config import DB
 from werkzeug.utils import secure_filename
+from auth_util import login_required
 
 conn = pymysql.connect(
         host=DB['host'], 
@@ -30,6 +31,7 @@ post_fields = Post_api.model('Post', {  # Model 객체 생성
 class add_post(Resource):
     @Post_api.doc(description='게시글 추가')
     @Post_api.expect(post_fields)
+    @login_required
     def post(self): 
         title = request.json['title']
         content = request.json['content']
@@ -49,6 +51,7 @@ class add_post(Resource):
 @Post_api.route('/get_post', methods = ['GET'])
 class get_post(Resource):
     @Post_api.doc(description='게시글 조회')
+    @login_required
     def get(self):
         cursor.execute("SELECT * FROM post")
         posts = cursor.fetchall()
@@ -57,6 +60,7 @@ class get_post(Resource):
 @Post_api.route('/get_post/<int:post_id>', methods = ['GET'])
 class get_post(Resource):
     @Post_api.doc(description='게시글 확인')
+    @login_required
     def get(self, post_id):
         cursor.execute(f"SELECT * FROM post WHERE post_id = {post_id}")
         posts = cursor.fetchall()
@@ -65,6 +69,7 @@ class get_post(Resource):
 @Post_api.route('/delete_post/<int:post_id>', methods = ['DELETE'])
 class delete_post(Resource):
     @Post_api.doc(description='게시글 삭제')
+    @login_required
     def delete(self, post_id):
         cursor.execute(f"SELECT * FROM post WHERE post_id = {post_id}")
         exist = cursor.fetchone()
@@ -79,6 +84,7 @@ class delete_post(Resource):
 @Post_api.route('/update_post/<int:post_id>', methods = ['PUT'])
 class update_post(Resource):
     @Post_api.doc(description='게시글 수정')
+    @login_required
     def put(self, post_id):
         title = request.json['title']
         content = request.json['content']

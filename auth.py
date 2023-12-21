@@ -143,6 +143,7 @@ ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
 class leave(Resource):
     @Auth_api.expect(user_fields_auth)
     @Auth_api.doc(description="회원 탈퇴")
+    @login_required
     def post(self):
         name = request.json['name']
         pwd = request.json['pwd']
@@ -160,6 +161,7 @@ class leave(Resource):
 class company(Resource):
     @Auth_api.expect(company_fields)
     @Auth_api.doc(description="기업 등록")
+    @login_required
     def post(self):
         name = request.form['name']
         company_name = request.form['company_name']

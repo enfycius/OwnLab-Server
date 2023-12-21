@@ -4,6 +4,7 @@ from flask import request
 from flask_restx import Api, Namespace, Resource, fields
 from config import DB
 from werkzeug.utils import secure_filename
+from auth_util import login_required
 
 conn = pymysql.connect(
         host=DB['host'], 
@@ -49,6 +50,7 @@ ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
 class spec_api(Resource):
     @Spec_api.doc(description='스펙 조회')
     @Spec_api.response(200, '조회 성공')
+    @login_required
     def get(self):
         cursor.execute("SELECT * FROM spec")
         specs = cursor.fetchall()
@@ -56,6 +58,7 @@ class spec_api(Resource):
     
     @Spec_api.doc(description='스펙 추가')
     @Spec_api.expect(spec_fields)
+    @login_required
     def post(self):
         tos = request.form['type_of_spec']
         email = request.form['email']

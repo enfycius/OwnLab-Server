@@ -4,6 +4,7 @@ from flask import request
 from flask_restx import Api, Namespace, Resource, fields
 from config import DB
 from werkzeug.utils import secure_filename
+from auth_util import login_required
 
 conn = pymysql.connect(
         host=DB['host'], 
@@ -56,6 +57,7 @@ ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
 class add_resume(Resource):
     @Resume_api.doc(description='이력서 조회')
     @Resume_api.response(200, '조회 성공')
+    @login_required
     def get(self):
         cursor.execute("SELECT * FROM resume")
         resumes = cursor.fetchall()
@@ -64,6 +66,7 @@ class add_resume(Resource):
     @Resume_api.expect(resume_fields)
     @Resume_api.doc(description="이력서 등록")
     @Resume_api.response(200, '등록 성공')
+    @login_required
     def post(self): 
         profile = request.files['file']
         name = request.form['name']
