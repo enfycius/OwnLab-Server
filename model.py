@@ -10,16 +10,30 @@ Model_api = Namespace(
 
 @Model_api.route('/')
 class Model(Resource):
-    @login_required
+    # @login_required
     def get(self):
         survey_list = []
+        num_list = []
+        all_list = []
 
         with open('items.json', 'r', encoding='UTF8') as f:
             items = json.load(f)
 
         for i in range(len(items)):
+            num_list.append(i+1)
             survey_list.append(items['q'+str(i+1)])
-        
-        return {
-            'question': survey_list
+
+            temp_list = {
+                "id" : num_list[i],
+                "question" : survey_list[i]
+            }
+
+            all_list.append(temp_list)
+
+        return { 
+            "survey_items" : all_list
         }
+    
+    # {
+    #         'question': survey_list
+    #     }
