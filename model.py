@@ -34,6 +34,26 @@ class Model(Resource):
             "survey_items" : all_list
         }
     
-    # {
-    #         'question': survey_list
-    #     }
+    def post(self):
+        result = []
+
+        req_len = len(request.get_json())
+
+        for i in range(req_len):
+            temp_checked = request.json[i]['isChecked']
+            temp_id = request.json[i]['id']
+
+            temp_list = {
+                "ischecked" : temp_checked,
+                "id" : temp_id,
+                "check_type" : type(temp_checked)
+            }
+
+            result.append(temp_list)
+
+        print(result)
+
+        return {
+            "code" : 200,
+            "message" : "success"
+        }
