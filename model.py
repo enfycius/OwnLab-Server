@@ -40,7 +40,11 @@ class Model(Resource):
         req_len = len(request.get_json())
         work_time = request.json['work_time']
 
-        for i in range(req_len):
+        # print(request.get_json())
+
+        # temp = request.json['survey_results'][0]['isChecked']
+
+        for i in range(req_len-1):
             checked = request.json["survey_results"][i]['isChecked']
             id = request.json["survey_results"][i]['id']
 
