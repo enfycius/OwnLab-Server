@@ -37,19 +37,17 @@ class Model(Resource):
     def post(self):
         result = []
 
-        req_len = len(request.get_json())
         work_time = request.json['work_time']
 
-        # print(request.get_json())
-
-        # temp = request.json['survey_results'][0]['isChecked']
-
-        for i in range(req_len-1):
+        for i in range(len(request.json["survey_results"])):
             checked = request.json["survey_results"][i]['isChecked']
             id = request.json["survey_results"][i]['id']
 
             if checked == True:
                 result.append(id)
+
+        print(len(request.json["survey_results"]))
+        print(result)
 
         return call_model(result, 1, work_time)[1]['checklist']
 
