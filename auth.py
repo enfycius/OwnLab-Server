@@ -103,12 +103,12 @@ class AuthLogin(Resource):
         if not cursor.execute("SELECT * FROM user WHERE email=%s", (email)):
             return {
                 "message": "User Not Found"
-            }, 200
+            }, 404
         
         elif not bcrypt.checkpw(pwd.encode('utf-8'), pwd_hash['pwd'].encode('utf-8')):  # 비밀번호 일치 확인
             return {
                 "message": "Auth Failed"
-            }, 200
+            }, 404
         else:
             # 최근 로그인 시간 업데이트
             sql = "UPDATE user SET recent_login = now() where email = %s"

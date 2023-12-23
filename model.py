@@ -47,13 +47,8 @@ class Model(Resource):
             if checked == True:
                 result.append(id)
 
-        return call_model(result, 1, work_time)
+        return call_model(result, 1, work_time)[1]['checklist']
 
-        # return {
-        #     "code" : 200,
-        #     "message" : "success"
-        # }
-    
 import pandas as pd
 
 def call_model(input_data, index_of_data, worktime):
