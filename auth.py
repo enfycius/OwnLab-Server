@@ -19,9 +19,6 @@ conn = pymysql.connect(
         charset=DB['charset'])
 
 cursor = conn.cursor(pymysql.cursors.DictCursor)
-cursor.execute("SELECT * FROM user")
-
-users = cursor.fetchall()
 
 Auth_api = Namespace(
     name="Auth",
@@ -74,6 +71,7 @@ class AuthRegister(Resource):
         name = request.json['name']
         pwd = request.json['pwd']
         tel = request.json['tel']
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
 
         if cursor.execute("SELECT * FROM user WHERE email=%s", (email)):
             return {
@@ -97,6 +95,7 @@ class AuthLogin(Resource):
     def post(self):
         email = request.json['email']
         pwd = request.json['pwd']
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
         cursor.execute("SELECT pwd FROM user WHERE email=%s", (email))
         pwd_hash = cursor.fetchone()
         
@@ -118,6 +117,7 @@ class AuthLogin(Resource):
             return {
                 'Authorization': jwt.encode({'email': email}, "secret", algorithm="HS256") # str으로 반환하여 return
             }, 200
+            
 
 @Auth_api.route('/email/check')
 class AuthEmailCheck(Resource):
@@ -125,13 +125,16 @@ class AuthEmailCheck(Resource):
     @Auth_api.doc(description="이메일 중복 체크")
     def post(self):
         email = request.json['email']
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
         cursor.execute("SELECT * FROM user WHERE email=%s", (email))
         user = cursor.fetchone()
         if user:
+            cursor.close()
             return {
                 "message": "Failed"
             }, 200
         else:
+            cursor.close()
             return {
                 "message": "Success"
             }, 200
@@ -147,6 +150,7 @@ class leave(Resource):
     def post(self):
         name = request.json['name']
         pwd = request.json['pwd']
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
         cursor.execute("SELECT pwd FROM user WHERE name=%s", (name))
         pwd_hash = cursor.fetchone()
         if bcrypt.checkpw(pwd.encode('utf-8'), pwd_hash['pwd'].encode('utf-8')):
@@ -197,6 +201,7 @@ class company(Resource):
 
         param = (company_path, name)
         sql = "UPDATE company SET company_img = %s where name = %s"
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
         cursor.execute(sql, param)
         conn.commit()
         conn.close()
