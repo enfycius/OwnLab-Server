@@ -14,8 +14,6 @@ conn = pymysql.connect(
         database=DB['database'], 
         charset=DB['charset'])
 
-cursor = conn.cursor(pymysql.cursors.DictCursor)
-
 Post_api = Namespace(
     name="Post",
     description="게시글 관련 API",
@@ -33,9 +31,10 @@ class add_post(Resource):
     @Post_api.expect(post_fields)
     @login_required
     def post(self): 
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+
         title = request.json['title']
         content = request.json['content']
-        email = request.json['email']
         
         cursor.execute("SELECT * FROM post where title = %s", title)
         posts = cursor.fetchone()
@@ -44,8 +43,9 @@ class add_post(Resource):
             if posts['title'] == title:
                 return "fail"
         else:
-            cursor.execute(f"INSERT INTO post (title, content, email) VALUES ('{title}', '{content}', '{email}')")
+            cursor.execute(f"INSERT INTO post (title, content) VALUES ('{title}', '{content}')")
             conn.commit()
+            conn.close()
             return "success"
         
 @Post_api.route('/get_post', methods = ['GET'])
@@ -53,6 +53,8 @@ class get_post(Resource):
     @Post_api.doc(description='게시글 조회')
     @login_required
     def get(self):
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+
         cursor.execute("SELECT * FROM post")
         posts = cursor.fetchall()
         return posts
@@ -62,6 +64,8 @@ class get_post(Resource):
     @Post_api.doc(description='게시글 확인')
     @login_required
     def get(self, post_id):
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+
         cursor.execute(f"SELECT * FROM post WHERE post_id = {post_id}")
         posts = cursor.fetchall()
         return posts
@@ -71,6 +75,8 @@ class delete_post(Resource):
     @Post_api.doc(description='게시글 삭제')
     @login_required
     def delete(self, post_id):
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+
         cursor.execute(f"SELECT * FROM post WHERE post_id = {post_id}")
         exist = cursor.fetchone()
 
@@ -79,6 +85,7 @@ class delete_post(Resource):
         else:
             cursor.execute(f"DELETE FROM post WHERE post_id = {post_id}")
             conn.commit()
+            conn.close()
             return "success"
 
 @Post_api.route('/update_post/<int:post_id>', methods = ['PUT'])
@@ -86,8 +93,11 @@ class update_post(Resource):
     @Post_api.doc(description='게시글 수정')
     @login_required
     def put(self, post_id):
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+
         title = request.json['title']
         content = request.json['content']
         cursor.execute(f"UPDATE post SET title = '{title}', content = '{content}' WHERE post_id = {post_id}")
         conn.commit()
+        conn.close()
         return "success"
