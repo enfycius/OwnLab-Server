@@ -4,7 +4,7 @@ from flask import request
 from flask_restx import Api, Namespace, Resource, fields
 from config import DB
 from werkzeug.utils import secure_filename
-from auth_util import login_required
+from auth_util import login_required, check_access_token
 
 conn = pymysql.connect(
         host=DB['host'], 
@@ -30,74 +30,94 @@ class add_post(Resource):
     @Post_api.doc(description='게시글 추가')
     @Post_api.expect(post_fields)
     @login_required
-    def post(self): 
-        cursor = conn.cursor(pymysql.cursors.DictCursor)
-
-        title = request.json['title']
-        content = request.json['content']
-        
-        cursor.execute("SELECT * FROM post where title = %s", title)
-        posts = cursor.fetchone()
-
-        if posts:
-            if posts['title'] == title:
+    def post(self):
+        try:
+            access_token = request.headers.get('Authorization')
+            payload = check_access_token(access_token)
+            if payload is None:
                 return "fail"
-        else:
-            cursor.execute(f"INSERT INTO post (title, content) VALUES ('{title}', '{content}')")
-            conn.commit()
-            conn.close()
+            else:
+                email = payload['email']
+
+            title = request.json['title']
+            content = request.json['content']
+
+            db_conn = conn
+            with db_conn.cursor(pymysql.cursors.DictCursor) as cursor:
+                cursor.execute(f"INSERT INTO post (title, content, email) VALUES ('{title}', '{content}', '{email}')")
+
+            db_conn.commit()
             return "success"
+        except Exception as e:
+            db_conn.close()
+            return str(e)
         
 @Post_api.route('/get_post', methods = ['GET'])
 class get_post(Resource):
     @Post_api.doc(description='게시글 조회')
     @login_required
     def get(self):
-        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        try:
+            db_conn = conn
+            with db_conn.cursor(pymysql.cursors.DictCursor) as cursor:
+                cursor.execute("SELECT * FROM post")
+                posts = cursor.fetchall()
+            return posts
+        except Exception as e:
+            db_conn.close()
+            return str(e)
 
-        cursor.execute("SELECT * FROM post")
-        posts = cursor.fetchall()
-        return posts
-    
 @Post_api.route('/get_post/<int:post_id>', methods = ['GET'])
 class get_post(Resource):
     @Post_api.doc(description='게시글 확인')
     @login_required
     def get(self, post_id):
-        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        try:
+            db_conn = conn
+            with db_conn.cursor(pymysql.cursors.DictCursor) as cursor:
+                cursor.execute(f"SELECT * FROM post WHERE post_id = {post_id}")
+                posts = cursor.fetchone()
+            return posts
+        except Exception as e:
+            db_conn.close()
+            return str(e)
 
-        cursor.execute(f"SELECT * FROM post WHERE post_id = {post_id}")
-        posts = cursor.fetchall()
-        return posts
-    
 @Post_api.route('/delete_post/<int:post_id>', methods = ['DELETE'])
 class delete_post(Resource):
     @Post_api.doc(description='게시글 삭제')
     @login_required
     def delete(self, post_id):
-        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        try:
+            db_conn = conn
+            with conn.cursor(pymysql.cursors.DictCursor) as cursor:
 
-        cursor.execute(f"SELECT * FROM post WHERE post_id = {post_id}")
-        exist = cursor.fetchone()
+                cursor.execute(f"SELECT * FROM post WHERE post_id = {post_id}")
+                exist = cursor.fetchone()
 
-        if exist is None:
-            return "fail"
-        else:
-            cursor.execute(f"DELETE FROM post WHERE post_id = {post_id}")
-            conn.commit()
-            conn.close()
-            return "success"
+                if exist is None:
+                    return "fail"
+                else:
+                    cursor.execute(f"DELETE FROM post WHERE post_id = {post_id}")
+                    conn.commit()
+                    return "success"
+        except Exception as e:
+            db_conn.close()
+            return str(e)
 
 @Post_api.route('/update_post/<int:post_id>', methods = ['PUT'])
 class update_post(Resource):
     @Post_api.doc(description='게시글 수정')
     @login_required
     def put(self, post_id):
-        cursor = conn.cursor(pymysql.cursors.DictCursor)
-
-        title = request.json['title']
-        content = request.json['content']
-        cursor.execute(f"UPDATE post SET title = '{title}', content = '{content}' WHERE post_id = {post_id}")
-        conn.commit()
-        conn.close()
-        return "success"
+        try:
+            title = request.json['title']
+            content = request.json['content']
+            db_conn = conn
+            with db_conn.cursor(pymysql.cursors.DictCursor) as cursor:
+                cursor.execute(f"UPDATE post SET title = '{title}', content = '{content}' WHERE post_id = {post_id}")
+                conn.commit()
+                return "success"
+            
+        except Exception as e:
+            conn.close()
+            return str(e)

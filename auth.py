@@ -67,78 +67,91 @@ class AuthRegister(Resource):
     @Auth_api.expect(user_fields_register)
     @Auth_api.doc(description="회원 가입")
     def post(self):
-        email = request.json['email']
-        name = request.json['name']
-        pwd = request.json['pwd']
-        tel = request.json['tel']
-        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        try:
+            email = request.json['email']
+            name = request.json['name']
+            pwd = request.json['pwd']
+            tel = request.json['tel']
 
-        if cursor.execute("SELECT * FROM user WHERE email=%s", (email)):
-            return {
-                "message": "User Already Exists"
-            }, 200
-        else:
-            pwd_hash = bcrypt.hashpw(pwd.encode("utf-8"), bcrypt.gensalt())  # 비밀번호 해싱
-            cursor.execute("INSERT INTO user (email, name, pwd, tel, join_date) VALUES (%s, %s, %s, %s, now())", (email, name, pwd_hash, tel))
-            conn.commit()
-            conn.close()
+            db_conn = conn
+            with db_conn.cursor(pymysql.cursors.DictCursor) as cursor:
 
-            return {
-                # 'Authorization': jwt.encode({'name': name}, "secret", algorithm="HS256")  # str으로 반환하여 return
-                "message": "Success"
-            }, 200
+                if cursor.execute("SELECT * FROM user WHERE email=%s", (email)):
+                    return {
+                        "message": "User Already Exists"
+                    }, 200
+                else:
+                    pwd_hash = bcrypt.hashpw(pwd.encode("utf-8"), bcrypt.gensalt())  # 비밀번호 해싱
+                    cursor.execute("INSERT INTO user (email, name, pwd, tel, join_date) VALUES (%s, %s, %s, %s, now())", (email, name, pwd_hash, tel))
+                    conn.commit()
+
+                    return {
+                        # 'Authorization': jwt.encode({'name': name}, "secret", algorithm="HS256")  # str으로 반환하여 return
+                        "message": "Success"
+                    }, 200
+        except Exception as e:
+            db_conn.close()
+            return str(e)
 
 @Auth_api.route('/login')
 class AuthLogin(Resource):
     @Auth_api.expect(user_fields_auth)
     @Auth_api.doc(description="로그인")
     def post(self):
-        email = request.json['email']
-        pwd = request.json['pwd']
-        cursor = conn.cursor(pymysql.cursors.DictCursor)
-        cursor.execute("SELECT pwd FROM user WHERE email=%s", (email))
-        pwd_hash = cursor.fetchone()
-        
-        if not cursor.execute("SELECT * FROM user WHERE email=%s", (email)):
-            return {
-                "message": "User Not Found"
-            }, 404
-        
-        elif not bcrypt.checkpw(pwd.encode('utf-8'), pwd_hash['pwd'].encode('utf-8')):  # 비밀번호 일치 확인
-            return {
-                "message": "Auth Failed"
-            }, 404
-        else:
-            # 최근 로그인 시간 업데이트
-            sql = "UPDATE user SET recent_login = now() where email = %s"
-            cursor.execute(sql, email)
-            conn.commit()
+        try:
+            email = request.json['email']
+            pwd = request.json['pwd']
+            db_conn = conn
+            with db_conn.cursor(pymysql.cursors.DictCursor) as cursor:
+                cursor.execute("SELECT pwd FROM user WHERE email=%s", (email))
+                pwd_hash = cursor.fetchone()
+                
+                if not cursor.execute("SELECT * FROM user WHERE email=%s", (email)):
+                    return {
+                        "message": "User Not Found"
+                    }, 404
+                
+                elif not bcrypt.checkpw(pwd.encode('utf-8'), pwd_hash['pwd'].encode('utf-8')):  # 비밀번호 일치 확인
+                    return {
+                        "message": "Auth Failed"
+                    }, 404
+                else:
+                    # 최근 로그인 시간 업데이트
+                    sql = "UPDATE user SET recent_login = now() where email = %s"
+                    cursor.execute(sql, email)
+                    conn.commit()
 
-            return {
-                'Authorization': jwt.encode({'email': email}, "secret", algorithm="HS256") # str으로 반환하여 return
-            }, 200
-            
+                    return {
+                        'Authorization': jwt.encode({'email': email}, "secret", algorithm="HS256") # str으로 반환하여 return
+                    }, 200
+                
+        except Exception as e:
+            db_conn.close()
+            return str(e)
 
 @Auth_api.route('/email/check')
 class AuthEmailCheck(Resource):
     @Auth_api.expect(email_fields)
     @Auth_api.doc(description="이메일 중복 체크")
     def post(self):
-        email = request.json['email']
-        cursor = conn.cursor(pymysql.cursors.DictCursor)
-        cursor.execute("SELECT * FROM user WHERE email=%s", (email))
-        user = cursor.fetchone()
-        if user:
-            cursor.close()
-            return {
-                "message": "Failed"
-            }, 200
-        else:
-            cursor.close()
-            return {
-                "message": "Success"
-            }, 200
-
+        try:
+            email = request.json['email']
+            db_conn = conn
+            with db_conn.cursor(pymysql.cursors.DictCursor) as cursor:
+                cursor.execute("SELECT * FROM user WHERE email=%s", (email))
+                user = cursor.fetchone()
+                if user:
+                    return {
+                        "message": "Failed"
+                    }, 200
+                else:
+                    return {
+                        "message": "Success"
+                    }, 200
+        except Exception as e:
+            db_conn.close()
+            return str(e)
+        
 UPLOAD_FOLDER = os.path.join('static', 'images')
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
 
@@ -148,18 +161,22 @@ class leave(Resource):
     @Auth_api.doc(description="회원 탈퇴")
     @login_required
     def post(self):
-        name = request.json['name']
-        pwd = request.json['pwd']
-        cursor = conn.cursor(pymysql.cursors.DictCursor)
-        cursor.execute("SELECT pwd FROM user WHERE name=%s", (name))
-        pwd_hash = cursor.fetchone()
-        if bcrypt.checkpw(pwd.encode('utf-8'), pwd_hash['pwd'].encode('utf-8')):
-            sql = "UPDATE user SET leave_date = now() where name = %s"
-            cursor.execute(sql, name)
-            conn.commit()
-            conn.close()
-
-        return 'leave success'
+        try:
+            name = request.json['name']
+            pwd = request.json['pwd']
+            db_conn = conn
+            with db_conn.cursor(pymysql.cursors.DictCursor) as cursor:
+                cursor.execute("SELECT pwd FROM user WHERE name=%s", (name))
+                pwd_hash = cursor.fetchone()
+                if bcrypt.checkpw(pwd.encode('utf-8'), pwd_hash['pwd'].encode('utf-8')):
+                    sql = "UPDATE user SET leave_date = now() where name = %s"
+                    cursor.execute(sql, name)
+                    conn.commit()
+            return 'leave success'
+        
+        except Exception as e:
+            db_conn.close()
+            return str(e)
     
 @Auth_api.route('/company', methods = ['POST'])
 class company(Resource):
@@ -167,46 +184,50 @@ class company(Resource):
     @Auth_api.doc(description="기업 등록")
     @login_required
     def post(self):
-        name = request.form['name']
-        company_name = request.form['company_name']
-        zip_code = request.form['zip_code']
-        address = request.form['address']
-        address_detail = request.form['address_detail']
-        ceo_name = request.form['ceo_name']
-        ceo_tel = request.form['ceo_tel']
-        homepage = request.form['homepage']
-        created_date = request.form['created_date']
-        listed = request.form['listed']
-        company_vision = request.form['company_vision']
+        try:
+            name = request.form['name']
+            company_name = request.form['company_name']
+            zip_code = request.form['zip_code']
+            address = request.form['address']
+            address_detail = request.form['address_detail']
+            ceo_name = request.form['ceo_name']
+            ceo_tel = request.form['ceo_tel']
+            homepage = request.form['homepage']
+            created_date = request.form['created_date']
+            listed = request.form['listed']
+            company_vision = request.form['company_vision']
+            
+            company_img = request.files['company_img']
+            rep_img = request.files['rep_img']
+            logo = request.files['logo']
+
+            # img 파일 저장
+            company_img_name = secure_filename(company_img.filename)
+            company_path = os.path.join(UPLOAD_FOLDER, company_img_name)
+            company_img.save(company_path)
+
+            rep_img_name = secure_filename(rep_img.filename)
+            rep_path = os.path.join(UPLOAD_FOLDER, rep_img_name)
+            rep_img.save(rep_path)
+
+            logo_name = secure_filename(logo.filename)
+            logo_path = os.path.join(UPLOAD_FOLDER, logo_name)
+            logo.save(logo_path)
+
+            param = (company_name, zip_code, address, address_detail, ceo_name, ceo_tel, homepage, created_date, listed, company_vision, company_img, rep_img, logo, name)
+            sql = "UPDATE company SET company_name = %s, zip_code = %s, address = %s, address_detail = %s, ceo_name = %s, ceo_tel = %s, homepage = %s, created_date = %s, listed = %s, company_vision = %s, company_img = %s, rep_img = %s, logo = %s where name = %s"
+
+            param = (company_path, name)
+            sql = "UPDATE company SET company_img = %s where name = %s"
+            db_conn = conn
+            with db_conn.cursor(pymysql.cursors.DictCursor) as cursor:
+                cursor.execute(sql, param)
+                conn.commit()
+            return 'upload success'
         
-        company_img = request.files['company_img']
-        rep_img = request.files['rep_img']
-        logo = request.files['logo']
-
-        # img 파일 저장
-        company_img_name = secure_filename(company_img.filename)
-        company_path = os.path.join(UPLOAD_FOLDER, company_img_name)
-        company_img.save(company_path)
-
-        rep_img_name = secure_filename(rep_img.filename)
-        rep_path = os.path.join(UPLOAD_FOLDER, rep_img_name)
-        rep_img.save(rep_path)
-
-        logo_name = secure_filename(logo.filename)
-        logo_path = os.path.join(UPLOAD_FOLDER, logo_name)
-        logo.save(logo_path)
-
-        param = (company_name, zip_code, address, address_detail, ceo_name, ceo_tel, homepage, created_date, listed, company_vision, company_img, rep_img, logo, name)
-        sql = "UPDATE company SET company_name = %s, zip_code = %s, address = %s, address_detail = %s, ceo_name = %s, ceo_tel = %s, homepage = %s, created_date = %s, listed = %s, company_vision = %s, company_img = %s, rep_img = %s, logo = %s where name = %s"
-
-        param = (company_path, name)
-        sql = "UPDATE company SET company_img = %s where name = %s"
-        cursor = conn.cursor(pymysql.cursors.DictCursor)
-        cursor.execute(sql, param)
-        conn.commit()
-        conn.close()
-
-        return 'upload success'
+        except Exception as e:
+            db_conn.close()
+            return str(e)
     
 @Auth_api.route('/email')
 class AuthEmail(Resource):
@@ -218,6 +239,4 @@ class AuthEmail(Resource):
             payload = check_access_token(access_token)
             if payload is None:
                 return Response(status=401)
-        else:
-            return Response(status=401)
-        return payload
+        return payload["email"]
