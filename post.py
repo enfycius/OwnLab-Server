@@ -45,10 +45,12 @@ class add_post(Resource):
             assignee = request.json['assignee']
             registration_method = request.json['registration_method']
             address = request.json['address']
+            start_date = request.json['start_date']
+            end_date = request.json['end_date']
 
             db_conn = conn
             with db_conn.cursor(pymysql.cursors.DictCursor) as cursor:
-                cursor.execute(f"INSERT INTO post (title, contacts, email, assignee, registration_method, address) VALUES ('{title}', '{contacts}', '{email}', '{assignee}', '{registration_method}', '{address}')")
+                cursor.execute(f"INSERT INTO post (title, contacts, email, assignee, registration_method, address, start_date, end_date) VALUES ('{title}', '{contacts}', '{email}', '{assignee}', '{registration_method}', '{address}', '{start_date}', '{end_date}')")
 
             db_conn.commit()
             return "success"
