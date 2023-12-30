@@ -40,11 +40,15 @@ class add_post(Resource):
                 email = payload['email']
 
             title = request.json['title']
-            content = request.json['content']
+            # content = request.json['content']
+            contacts = request.json['contacts']
+            assignee = request.json['assignee']
+            registration_method = request.json['registration_method']
+            address = request.json['address']
 
             db_conn = conn
             with db_conn.cursor(pymysql.cursors.DictCursor) as cursor:
-                cursor.execute(f"INSERT INTO post (title, content, email) VALUES ('{title}', '{content}', '{email}')")
+                cursor.execute(f"INSERT INTO post (title, contacts, email, assignee, registration_method, address) VALUES ('{title}', '{contacts}', '{email}', '{assignee}', '{registration_method}', '{address}')")
 
             db_conn.commit()
             return "success"
