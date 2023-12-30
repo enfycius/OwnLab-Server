@@ -51,7 +51,7 @@ class add_post(Resource):
 
             db_conn = conn
             with db_conn.cursor(pymysql.cursors.DictCursor) as cursor:
-                cursor.execute(f"INSERT INTO post (title, contacts, email, assignee, registration_method, address, detailed_link, start_date, end_date) VALUES ('{title}', '{contacts}', '{email}', '{assignee}', '{registration_method}', '{address}', '{detailed_link}','{start_date}', '{end_date}')")
+                cursor.execute(f"INSERT INTO post (title, contacts, email, assignee, registration_method, address, detailed_link, start_date, end_date, registration_date) VALUES ('{title}', '{contacts}', '{email}', '{assignee}', '{registration_method}', '{address}', '{detailed_link}','{start_date}', '{end_date}', DATE_FORMAT(now() + interval 9 hour, '%Y-%m-%d %H:%i'))")
 
             db_conn.commit()
             return "success"
@@ -69,7 +69,8 @@ class get_post(Resource):
             with db_conn.cursor(pymysql.cursors.DictCursor) as cursor:
                 cursor.execute("SELECT * FROM post")
                 posts = cursor.fetchall()
-            return {"post_items" : posts}
+            return posts
+        # {"post_items" : posts}
         except Exception as e:
             db_conn.close()
             return str(e)
