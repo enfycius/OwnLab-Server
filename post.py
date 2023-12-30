@@ -62,7 +62,7 @@ class get_post(Resource):
             with db_conn.cursor(pymysql.cursors.DictCursor) as cursor:
                 cursor.execute("SELECT * FROM post")
                 posts = cursor.fetchall()
-            return posts
+            return {"post_items" : posts}
         except Exception as e:
             db_conn.close()
             return str(e)
