@@ -54,7 +54,10 @@ class add_post(Resource):
                 cursor.execute(f"INSERT INTO post (title, contacts, email, assignee, registration_method, address, detailed_link, start_date, end_date, registration_date) VALUES ('{title}', '{contacts}', '{email}', '{assignee}', '{registration_method}', '{address}', '{detailed_link}','{start_date}', '{end_date}', DATE_FORMAT(now() + interval 9 hour, '%Y-%m-%d %H:%i'))")
 
             db_conn.commit()
-            return "success"
+            return {
+                "message" : "success"
+            },200
+        
         except Exception as e:
             db_conn.close()
             return str(e)
@@ -102,11 +105,15 @@ class delete_post(Resource):
                 exist = cursor.fetchone()
 
                 if exist is None:
-                    return "fail"
+                    return {
+                        "message" : "fail"
+                    },200
                 else:
                     cursor.execute(f"DELETE FROM post WHERE post_id = {post_id}")
                     conn.commit()
-                    return "success"
+                    return {
+                        "message" : "success"
+                    },200
         except Exception as e:
             db_conn.close()
             return str(e)
@@ -123,7 +130,9 @@ class update_post(Resource):
             with db_conn.cursor(pymysql.cursors.DictCursor) as cursor:
                 cursor.execute(f"UPDATE post SET title = '{title}', content = '{content}' WHERE post_id = {post_id}")
                 conn.commit()
-                return "success"
+                return {
+                    "message" : "success"
+                },200
             
         except Exception as e:
             conn.close()
