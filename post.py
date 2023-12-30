@@ -74,8 +74,9 @@ class get_post(Resource):
                 posts = cursor.fetchall()
             return {"post_items" : posts}
         except Exception as e:
-            db_conn.close()
             return str(e)
+        finally:
+            pass
 
 @Post_api.route('/get_post/<int:post_id>', methods = ['GET'])
 class get_post(Resource):
@@ -89,8 +90,9 @@ class get_post(Resource):
                 posts = cursor.fetchone()
             return posts
         except Exception as e:
-            db_conn.close()
             return str(e)
+        finally:
+            pass
 
 @Post_api.route('/delete_post/<int:post_id>', methods = ['DELETE'])
 class delete_post(Resource):
@@ -99,7 +101,7 @@ class delete_post(Resource):
     def delete(self, post_id):
         try:
             db_conn = conn
-            with conn.cursor(pymysql.cursors.DictCursor) as cursor:
+            with db_conn.cursor(pymysql.cursors.DictCursor) as cursor:
 
                 cursor.execute(f"SELECT * FROM post WHERE post_id = {post_id}")
                 exist = cursor.fetchone()
@@ -115,8 +117,9 @@ class delete_post(Resource):
                         "message" : "success"
                     },200
         except Exception as e:
-            db_conn.close()
             return str(e)
+        finally:
+            pass
 
 @Post_api.route('/update_post/<int:post_id>', methods = ['PUT'])
 class update_post(Resource):
@@ -135,5 +138,6 @@ class update_post(Resource):
                 },200
             
         except Exception as e:
-            conn.close()
             return str(e)
+        finally:
+            pass

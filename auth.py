@@ -90,8 +90,9 @@ class AuthRegister(Resource):
                         "message": "Success"
                     }, 200
         except Exception as e:
-            db_conn.close()
             return str(e)
+        finally:
+            pass
 
 @Auth_api.route('/login')
 class AuthLogin(Resource):
@@ -126,8 +127,9 @@ class AuthLogin(Resource):
                     }, 200
                 
         except Exception as e:
-            db_conn.close()
             return str(e)
+        finally:
+            pass
 
 @Auth_api.route('/email/check')
 class AuthEmailCheck(Resource):
@@ -149,8 +151,9 @@ class AuthEmailCheck(Resource):
                         "message": "Success"
                     }, 200
         except Exception as e:
-            db_conn.close()
             return str(e)
+        finally:
+            pass
         
 UPLOAD_FOLDER = os.path.join('static', 'images')
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
@@ -175,8 +178,9 @@ class leave(Resource):
             return 'leave success'
         
         except Exception as e:
-            db_conn.close()
             return str(e)
+        finally:
+            pass
     
 @Auth_api.route('/company', methods = ['POST'])
 class company(Resource):
@@ -226,8 +230,9 @@ class company(Resource):
             return 'upload success'
         
         except Exception as e:
-            db_conn.close()
             return str(e)
+        finally:
+            pass
     
 @Auth_api.route('/email')
 class AuthEmail(Resource):
