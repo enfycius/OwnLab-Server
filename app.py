@@ -19,5 +19,4 @@ api.add_namespace(Post_api, '/post')
 api.add_namespace(Model_api, '/model')
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=5000, debug=True)
-
+    app.run(host='0.0.0.0', port=5000, debug="True")
