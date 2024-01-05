@@ -9,6 +9,7 @@ import pymysql
 import os
 from werkzeug.utils import secure_filename
 from auth_util import login_required, check_access_token
+from mysql.connector import pooling
 
 conn = pymysql.connect(
         host=DB['host'], 
@@ -18,7 +19,19 @@ conn = pymysql.connect(
         database=DB['database'], 
         charset=DB['charset'])
 
-cursor = conn.cursor(pymysql.cursors.DictCursor)
+# cursor = conn.cursor(pymysql.cursors.DictCursor)
+
+connection_pool = pooling.MySQLConnectionPool(
+    pool_name = "capstone_pool",
+    pool_size = 2,
+    pool_reset_session = True,
+    host = DB['host'],
+    port = DB['port'],
+    user = DB['user_id'],
+    password = DB['user_pw'],
+    database = DB['database'],
+    charset = DB['charset']
+)
 
 Auth_api = Namespace(
     name="Auth",
@@ -62,37 +75,49 @@ company_fields = Auth_api.model('Company', {
     'logo': fields.String(required=True, description="logo file")
 })
 
+@Auth_api.route('/test')
+class AuthTest(Resource):
+    @Auth_api.doc(description="테스트")
+    def get(self):
+        connection_obj = connection_pool.get_connection()
+        if connection_obj.is_connected():
+            with connection_obj.cursor(pymysql.cursors.DictCursor) as cursor:
+                sql = "SELECT * FROM user"
+                cursor.execute(sql)
+                test_sql = cursor.fetchall()
+        return test_sql
+
 @Auth_api.route('/register')
 class AuthRegister(Resource):
     @Auth_api.expect(user_fields_register)
     @Auth_api.doc(description="회원 가입")
     def post(self):
-        try:
-            email = request.json['email']
-            name = request.json['name']
-            pwd = request.json['pwd']
-            tel = request.json['tel']
+        email = request.json['email']
+        name = request.json['name']
+        pwd = request.json['pwd']
+        tel = request.json['tel']
 
-            db_conn = conn
-            with db_conn.cursor(pymysql.cursors.DictCursor) as cursor:
-
-                if cursor.execute("SELECT * FROM user WHERE email=%s", (email)):
+        connection_obj = connection_pool.get_connection()
+        if connection_obj.is_connected():
+            with connection_obj.cursor(pymysql.cursors.DictCursor) as cursor:
+                sql = "SELECT * FROM user WHERE email=%(email)s"
+                cursor.execute(sql, {'email' : email})
+                dupl_check = cursor.fetchone()
+                if dupl_check:
+                    connection_obj.close()
                     return {
                         "message": "User Already Exists"
                     }, 200
                 else:
                     pwd_hash = bcrypt.hashpw(pwd.encode("utf-8"), bcrypt.gensalt())  # 비밀번호 해싱
                     cursor.execute("INSERT INTO user (email, name, pwd, tel, join_date) VALUES (%s, %s, %s, %s, now())", (email, name, pwd_hash, tel))
-                    conn.commit()
+                    connection_obj.commit()
+                    connection_obj.close()
 
-                    return {
-                        # 'Authorization': jwt.encode({'name': name}, "secret", algorithm="HS256")  # str으로 반환하여 return
-                        "message": "Success"
-                    }, 200
-        except Exception as e:
-            return str(e)
-        finally:
-            pass
+        return {
+            # 'Authorization': jwt.encode({'name': name}, "secret", algorithm="HS256")  # str으로 반환하여 return
+            "message": "Success"
+        }, 200
 
 @Auth_api.route('/login')
 class AuthLogin(Resource):
@@ -102,31 +127,31 @@ class AuthLogin(Resource):
         try:
             email = request.json['email']
             pwd = request.json['pwd']
-            db_conn = conn
-            with db_conn.cursor(pymysql.cursors.DictCursor) as cursor:
-                cursor.execute("SELECT pwd FROM user WHERE email=%s", (email))
-                pwd_hash = cursor.fetchone()
-                
-                if not cursor.execute("SELECT * FROM user WHERE email=%s", (email)):
-                    return {
-                        "message": "User Not Found"
-                    }, 404
-                
-                elif not bcrypt.checkpw(pwd.encode('utf-8'), pwd_hash['pwd'].encode('utf-8')):  # 비밀번호 일치 확인
-                    return {
-                        "message": "Auth Failed"
-                    }, 404
-                else:
-                    # 최근 로그인 시간 업데이트
-                    sql = "UPDATE user SET recent_login = now() where email = %s"
-                    cursor.execute(sql, email)
-                    conn.commit()
 
-                    return {
-                        'Authorization': jwt.encode({'email': email}, "secret", algorithm="HS256") # str으로 반환하여 return
-                    }, 200
+            connection_obj = connection_pool.get_connection()
+            if connection_obj.is_connected():
+                with connection_obj.cursor(pymysql.cursors.DictCursor) as cursor:
+                    select_stmt = "SELECT pwd FROM user WHERE email = %(email)s"
+                    cursor.execute(select_stmt, { 'email': email })
+                    pwd_hash = cursor.fetchone()
+                    
+                    if not pwd_hash or not bcrypt.checkpw(pwd.encode('utf-8'), pwd_hash[0].encode('utf-8')):  # 이메일 여부 확인 및 비밀번호 일치 확인
+                        connection_obj.close()
+                        return {
+                            "message": "Auth Failed"
+                        }, 404
+                    else:
+                        # 최근 로그인 시간 업데이트
+                        sql = "UPDATE user SET recent_login = now() + interval 9 hour where email = %(email)s"
+                        cursor.execute(sql, {'email' : email})
+                        connection_obj.commit()
+                        connection_obj.close()
+                        return {
+                            'Authorization': jwt.encode({'email': email}, "secret", algorithm="HS256") # str으로 반환하여 return
+                        }, 200
                 
         except Exception as e:
+            print(str(e))
             return str(e)
         finally:
             pass
@@ -138,18 +163,22 @@ class AuthEmailCheck(Resource):
     def post(self):
         try:
             email = request.json['email']
-            db_conn = conn
-            with db_conn.cursor(pymysql.cursors.DictCursor) as cursor:
-                cursor.execute("SELECT * FROM user WHERE email=%s", (email))
-                user = cursor.fetchone()
-                if user:
-                    return {
-                        "message": "Failed"
-                    }, 200
-                else:
-                    return {
-                        "message": "Success"
-                    }, 200
+            connection_obj = connection_pool.get_connection()
+            if connection_obj.is_connected():
+                with connection_obj.cursor(pymysql.cursors.DictCursor) as cursor:
+                    sql = "SELECT * FROM user WHERE email=%(email)s"
+                    cursor.execute(sql, {'email' : email})
+                    user = cursor.fetchone()
+                    if user:
+                        connection_obj.close()
+                        return {
+                            "message": "Failed"
+                        }, 404
+                    else:
+                        connection_obj.close()
+                        return {
+                            "message": "Success"
+                        }, 200
         except Exception as e:
             return str(e)
         finally:
@@ -167,14 +196,17 @@ class leave(Resource):
         try:
             name = request.json['name']
             pwd = request.json['pwd']
-            db_conn = conn
-            with db_conn.cursor(pymysql.cursors.DictCursor) as cursor:
-                cursor.execute("SELECT pwd FROM user WHERE name=%s", (name))
-                pwd_hash = cursor.fetchone()
-                if bcrypt.checkpw(pwd.encode('utf-8'), pwd_hash['pwd'].encode('utf-8')):
-                    sql = "UPDATE user SET leave_date = now() where name = %s"
-                    cursor.execute(sql, name)
-                    conn.commit()
+            connection_obj = connection_pool.get_connection()
+            if connection_obj.is_connected():
+                with connection_obj.cursor(pymysql.cursors.DictCursor) as cursor:
+                    sql = "SELECT pwd FROM user WHERE name=%(name)s"
+                    cursor.execute(sql, {'name' : name})
+                    pwd_hash = cursor.fetchone()
+                    if bcrypt.checkpw(pwd.encode('utf-8'), pwd_hash[0].encode('utf-8')):
+                        sql = "UPDATE user SET leave_date = now() where name = %(name)s"
+                        cursor.execute(sql, {'name' : name})
+                        connection_obj.commit()
+                        connection_obj.close()
             return 'leave success'
         
         except Exception as e:
@@ -220,13 +252,14 @@ class company(Resource):
 
             param = (company_name, zip_code, address, address_detail, ceo_name, ceo_tel, homepage, created_date, listed, company_vision, company_img, rep_img, logo, name)
             sql = "UPDATE company SET company_name = %s, zip_code = %s, address = %s, address_detail = %s, ceo_name = %s, ceo_tel = %s, homepage = %s, created_date = %s, listed = %s, company_vision = %s, company_img = %s, rep_img = %s, logo = %s where name = %s"
-
             param = (company_path, name)
             sql = "UPDATE company SET company_img = %s where name = %s"
-            db_conn = conn
-            with db_conn.cursor(pymysql.cursors.DictCursor) as cursor:
-                cursor.execute(sql, param)
-                conn.commit()
+            connection_obj = connection_pool.get_connection()
+            if connection_obj.is_connected():
+                with connection_obj.cursor(pymysql.cursors.DictCursor) as cursor:
+                    cursor.execute(sql, param)
+                    connection_obj.commit()
+                    connection_obj.close()
             return 'upload success'
         
         except Exception as e:
