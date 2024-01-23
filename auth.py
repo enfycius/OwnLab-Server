@@ -23,7 +23,7 @@ conn = pymysql.connect(
 
 connection_pool = pooling.MySQLConnectionPool(
     pool_name = "capstone_pool",
-    pool_size = 2,
+    pool_size = 10,
     pool_reset_session = True,
     host = DB['host'],
     port = DB['port'],
