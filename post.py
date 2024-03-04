@@ -90,6 +90,10 @@ class get_post(Resource):
                     cursor.execute(sql)
                     posts = cursor.fetchall()
                     connection_obj.close()
+
+                    keys = ["title", "email", "post_id", "contacts", "assignee", "registration_method", "registration_date", "detailed_link", "address", "start_date", "end_date"]
+                    posts = [dict(zip(keys, row)) for row in posts]
+                    
                 return {"post_items" : posts}
         except Exception as e:
             return str(e)
