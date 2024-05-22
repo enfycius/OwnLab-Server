@@ -77,6 +77,36 @@ class add_post(Resource):
         except Exception as e:
             return str(e)
         
+@Post_api.route("/apply_post", methods = ['POST'])
+class apply_post(Resource):
+    @Post_api.doc(description="공고 지원")
+    @login_required
+    def post(self):
+        try:
+            access_token = request.headers.get('Authorization')
+            payload = check_access_token(access_token)
+            if payload is None:
+                return "fail"
+            else:
+                email = payload['email']
+
+            post_id = request.json['post_id']
+            assignee = request.json['assignee']
+
+            connection_obj = connection_pool.get_connection()
+            if connection_obj.is_connected():
+                with connection_obj.cursor(pymysql.cursors.DictCursor) as cursor:
+                    sql = f"INSERT INTO apply (post_id, assignee, applicant, registration_date) VALUES ('{post_id}', '{assignee}', '{email}', DATE_FORMAT(now() + interval 9 hour, '%Y-%m-%d %H:%i'))"
+                    cursor.execute(sql)
+                    connection_obj.commit()
+                    connection_obj.close()
+            return {
+                "message" : "success"
+            },200
+        
+        except Exception as e:
+            return str(e)
+        
 @Post_api.route('/get_post', methods = ['GET'])
 class get_post(Resource):
     @Post_api.doc(description='게시글 조회')
