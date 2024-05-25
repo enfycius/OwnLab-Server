@@ -62,11 +62,12 @@ class add_post(Resource):
             detailed_link = request.json['detailed_link']
             start_date = request.json['start_date']
             end_date = request.json['end_date']
+            limitation = request.json['limitation']
 
             connection_obj = connection_pool.get_connection()
             if connection_obj.is_connected():
                 with connection_obj.cursor(pymysql.cursors.DictCursor) as cursor:
-                    sql = f"INSERT INTO post (title, contacts, email, assignee, registration_method, address, detailed_link, start_date, end_date, registration_date) VALUES ('{title}', '{contacts}', '{email}', '{assignee}', '{registration_method}', '{address}', '{detailed_link}','{start_date}', '{end_date}', DATE_FORMAT(now() + interval 9 hour, '%Y-%m-%d %H:%i'))"
+                    sql = f"INSERT INTO post (title, contacts, email, assignee, registration_method, address, detailed_link, start_date, end_date, registration_date, limitation) VALUES ('{title}', '{contacts}', '{email}', '{assignee}', '{registration_method}', '{address}', '{detailed_link}','{start_date}', '{end_date}', DATE_FORMAT(now() + interval 9 hour, '%Y-%m-%d %H:%i'), {limitation})"
                     cursor.execute(sql)
                     connection_obj.commit()
                     connection_obj.close()
@@ -96,14 +97,37 @@ class apply_post(Resource):
             connection_obj = connection_pool.get_connection()
             if connection_obj.is_connected():
                 with connection_obj.cursor(pymysql.cursors.DictCursor) as cursor:
-                    sql = f"INSERT INTO apply (post_id, assignee, applicant, registration_date) VALUES ('{post_id}', '{assignee}', '{email}', DATE_FORMAT(now() + interval 9 hour, '%Y-%m-%d %H:%i'))"
+                    sql = f"SELECT * FROM apply WHERE post_id = {post_id} AND applicant = '{email}'"
                     cursor.execute(sql)
-                    connection_obj.commit()
-                    connection_obj.close()
-            return {
-                "message" : "success"
-            },200
-        
+                    result = cursor.fetchall()
+
+                    if result == []:
+                        print("It is Blank")
+                        print(post_id, assignee, email)
+                        sql = f"INSERT INTO apply (post_id, assignee, applicant, registration_date) VALUES ('{post_id}', '{assignee}', '{email}', DATE_FORMAT(now() + interval 9 hour, '%Y-%m-%d %H:%i'))"
+                        cursor.execute(sql)
+
+                        sql = f"SELECT * FROM post WHERE post_id = {post_id}"
+                        cursor.execute(sql)
+                        posts = cursor.fetchall()
+
+                        # 마지막에서 두 번째 Column에서 count 값 Retrieve
+                        cursor.execute(f"UPDATE post SET count = {posts[0][-2] + 1} WHERE post_id = {post_id}")
+                        connection_obj.commit()
+                        connection_obj.close()
+
+                        return {
+                            "message" : "success"
+                        },200
+                    else:
+                        print("It is not None:", result)
+
+                        if len(result) != 0:
+                            print("Already applied")
+                            return {
+                                "message" : "Already applied"
+                            },200
+                        
         except Exception as e:
             return str(e)
         
@@ -201,3 +225,4 @@ class update_post(Resource):
             return str(e)
         finally:
             pass
+
