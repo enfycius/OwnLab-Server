@@ -5,6 +5,7 @@ from auth import Auth_api
 from resume import Resume_api
 from spec import Spec_api
 from post import Post_api
+from applicant import Applicant_api
 from model import Model_api
 
 app = Flask(__name__)
@@ -16,6 +17,7 @@ api.add_namespace(Auth_api, '/auth')
 api.add_namespace(Resume_api, '/resume')
 api.add_namespace(Spec_api, '/spec')
 api.add_namespace(Post_api, '/post')
+api.add_namespace(Applicant_api, '/applicant')
 api.add_namespace(Model_api, '/model')
 
 if __name__ == "__main__":
