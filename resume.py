@@ -4,17 +4,29 @@ from flask import request
 from flask_restx import Api, Namespace, Resource, fields
 from config import DB
 from werkzeug.utils import secure_filename
-from auth_util import login_required
+from auth_util import login_required, check_access_token
+from mysql.connector import pooling
 
 conn = pymysql.connect(
-        host=DB['host'], 
-        port=DB['port'], 
-        user=DB['user_id'], 
-        password=DB['user_pw'], 
-        database=DB['database'], 
-        charset=DB['charset'])
+        host=DB['host'],
+        port=DB['port'],
+        user=DB['user_id'],
+        password=DB['user_pw'],
+        database=DB['database'],
+        charset=DB['charset'],
+        cursorclass=pymysql.cursors.DictCursor)
 
-cursor = conn.cursor(pymysql.cursors.DictCursor)
+connection_pool = pooling.MySQLConnectionPool(
+    pool_name = "capstone_pool",
+    pool_size = 10,
+    pool_reset_session = True,
+    host = DB['host'],
+    port = DB['port'],
+    user = DB['user_id'],
+    password = DB['user_pw'],
+    database = DB['database'],
+    charset = DB['charset']
+)
 
 Resume_api = Namespace(
     name="Resume",
@@ -53,61 +65,71 @@ resume_fields = Resume_api.model('Resume', {  # Model 객체 생성
 UPLOAD_FOLDER = os.path.join('static', 'images')
 ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
 
-@Resume_api.route('/add_resume', methods = ['GET', 'POST'])
-class add_resume(Resource):
-    @Resume_api.doc(description='이력서 조회')
-    @Resume_api.response(200, '조회 성공')
+@Resume_api.route("/add_resume", methods = ['POST'])
+class apply_post(Resource):
+    @Resume_api.doc(description="공고 지원")
     @login_required
-    def get(self):
-        cursor.execute("SELECT * FROM resume")
-        resumes = cursor.fetchall()
-        return resumes
+    def post(self):
+        try:
+            access_token = request.headers.get('Authorization')
+            payload = check_access_token(access_token)
+            if payload is None:
+                return "fail"
+            else:
+                email = payload['email']
 
-    @Resume_api.expect(resume_fields)
-    @Resume_api.doc(description="이력서 등록")
-    @Resume_api.response(200, '등록 성공')
-    @login_required
-    def post(self): 
-        profile = request.files['file']
-        name = request.form['name']
-        tel = request.form['tel']
-        email = request.form['email']
-        birth = request.form['birth']
-        sex = request.form['sex']
-        address = request.form['address']
-        school = request.form['school']
-        school_state = request.form['school_state']
-        company_career = request.form['company_career']
-        part_career = request.form['part_career']
-        work_time = request.form['work_time']
-        work_start = request.form['work_start']
-        work_end = request.form['work_end']
-        working = request.form['working']
-        work = request.form['work']
-        sido = request.form['sido']
-        sigungu = request.form['sigungu']
-        first_work = request.form['first_work']
-        second_work = request.form['second_work']
-        work_type = request.form['work_type']
-        wish_work_term = request.form['wish_work_term']
-        wish_work_term_etc = request.form['wish_work_term_etc']
-        wish_salary_type = request.form['wish_salary_type']
-        ps = request.form['ps']
-        open_permission = request.form['open_permission']
+            name = request.form['name']
+            tel = request.form['tel']
+            birth = request.form['birth']
+            sex = request.form['sex']
+            address = request.form['address']
+            resume_title = request.form['resume_title']
+            school = request.form['school']
+            school_state = request.form['school_state']
+            company_career = request.form['company_career']
+            part_career = request.form['part_career']
+            work_time = request.form['work_time']
+            work_start = request.form['work_start']
+            work_end = request.form['work_end']
+            working = request.form['working']
+            work = request.form['work']
+            sido = request.form['sido']
+            sigungu = request.form['sigungu']
+            first_work = request.form['first_work']
+            second_work = request.form['second_work']
+            work_type = request.form['work_type']
+            wish_work_term = request.form['wish_work_term']
+            wish_work_term_etc = request.form['wish_work_term_etc']
+            wish_salary_type = request.form['wish_salary_type']
+            ps = request.form['ps']
+            open_permission = request.form['open_permission']
 
-        filename = secure_filename(profile.filename)
-        file_path = os.path.join(UPLOAD_FOLDER, filename)
-        profile.save(file_path)
+            connection_obj = connection_pool.get_connection()
+            if connection_obj.is_connected():
+                with connection_obj.cursor(pymysql.cursors.DictCursor) as cursor:
 
-        param = (file_path, name, tel, email, birth, sex, address, school, school_state, company_career, part_career, work_time, work_start, work_end, working, work, sido, sigungu, first_work, second_work, work_type, wish_work_term, wish_work_term_etc, wish_salary_type, ps, open_permission)
+                    param = (name, tel, email, birth, sex, address, resume_title, school, school_state, company_career, part_career, work_time, work_start, work_end, working, work, sido, sigungu, first_work, second_work, work_type, wish_work_term, wish_work_term_etc, wish_salary_type, ps, open_permission)
 
-        sql = "INSERT resume (profile, name, tel, email, birth, sex, address, school, school_state, company_career, part_career, work_time, work_start, work_end, working, work, sido, sigungu, first_work, second_work, work_type, wish_work_term, wish_work_term_etc, wish_salary_type, ps, open_permission) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,%s,%s,%s,%s, %s, %s, %s, %s, %s,%s,%s,%s,%s,%s,%s)"
+                    columns = [
+                        "name", "tel", "email", "birth", "sex", "address",
+                        "resume_title", "school", "school_state", "company_career",
+                        "part_career", "work_time", "work_start", "work_end", "working",
+                        "work", "sido", "sigungu", "first_work", "second_work", "work_type",
+                        "wish_work_term", "wish_work_term_etc", "wish_salary_type", "ps", "open_permission"
+                    ]
 
-        cursor.execute(sql, param)
-        conn.commit()
-        conn.close()
+                    values_placeholders = ", ".join(["%s"] * len(columns))
+                    columns_string = ", ".join(columns)
 
-        return {
-            "message": "Success"
-        }, 200
-    
+                    sql = f"INSERT resume ({columns_string}) VALUES ({values_placeholders})"
+
+                    cursor.execute(sql, param)
+                    connection_obj.commit()
+                    connection_obj.close()
+
+                    return {
+                        "message" : "success"
+                    },200
+               
+        except Exception as e:
+            return str(e)
